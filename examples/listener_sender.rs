@@ -5,6 +5,7 @@ use std::{
         Mutex
     }
 };
+use clap::{arg, Command};
 
 struct Packet {
     topic: String,
@@ -16,9 +17,8 @@ struct Shared {
     packets: VecDeque<Packet>
 }
 
-async fn run_listener(shared: Arc<Mutex<Shared>>) {
-    let args: Vec<String> = std::env::args().collect();
-    let listener = args.get(2).unwrap().clone();
+async fn run_listener(listener: String, shared: Arc<Mutex<Shared>>) {
+    println!("Listener: {}", listener);
 
     let socket = tokio::net::UdpSocket::bind(listener.clone()).await.unwrap();
 
@@ -44,17 +44,15 @@ async fn run_listener(shared: Arc<Mutex<Shared>>) {
 }
 
 
-async fn run(shared: Arc<Mutex<Shared>>) {
-    let args: Vec<String> = std::env::args().collect();
-    let sender = args.get(4).unwrap().clone();
-    let listener = args.get(2).unwrap().clone();
+async fn run(host: String, sender: String, shared: Arc<Mutex<Shared>>) {
     println!("Sender: {}", sender);
-    println!("Listener: {}", listener);
 
-    let socket = tokio::net::UdpSocket::bind(listener.clone()).await.unwrap();
+    let socket = tokio::net::UdpSocket::bind(host.clone()).await.unwrap();
+    println!("Electrode node running at : {}", socket.local_addr().unwrap());
+
     socket.connect(sender.clone()).await.unwrap();
 
-    let data = format!("Data sent from {}", sender);
+    let data = format!("Data sent from {}", socket.local_addr().unwrap());
 
     let mut i = 0;
     loop {
@@ -64,15 +62,13 @@ async fn run(shared: Arc<Mutex<Shared>>) {
             eprintln!("Error: {}", e);
         }
 
-        tokio::time::sleep(tokio::time::Duration::from_millis(1000)).await;
+        tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
 
         i += 1;
 
-        if i == 10 {
+        if i >= 100 {
             break;
         }
-
-        println!("{}", i);
     }
 
     let mut shared = shared.lock().unwrap();
@@ -80,6 +76,14 @@ async fn run(shared: Arc<Mutex<Shared>>) {
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let matches = Command::new("Electrode").version("1.0").about("Dora node for communication between dataflow").arg(arg!(--address <VALUE>).required(true)).arg(arg!(--listener <VALUE>).required(true)).arg(arg!(--sender <VALUE>).required(true)).get_matches();
+
+    let (address, listener, sender) = (matches.get_one::<String>("address").expect("required").clone(), matches.get_one::<String>("listener").expect("required").clone(), matches.get_one::<String>("sender").expect("required").clone());
+
+    let listener = address.clone() + ":" + &listener;
+    let sender = address.clone() + ":" + &sender;
+    let host = address.clone() + ":0";
+
     let shared = Arc::new(Mutex::new(Shared {
         running: true,
         packets: VecDeque::new()
@@ -87,8 +91,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let runtime = tokio::runtime::Runtime::new().unwrap();
 
-    let listener_task = runtime.spawn(run_listener(shared.clone()));
-    let main_task = runtime.spawn(run(shared.clone()));
+    let listener_task = runtime.spawn(run_listener(sender, shared.clone()));
+    let main_task = runtime.spawn(run(host, listener, shared.clone()));
 
     let listener = runtime.block_on(listener_task);
     let main = runtime.block_on(main_task);
