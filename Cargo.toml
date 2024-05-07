@@ -8,3 +8,4 @@ edition = "2021"
 [dependencies]
 tokio = { version = "1", features = ["full"] }
 clap = "4.5.4"
+zenoh = "0.11.0-rc.2"
