@@ -26,12 +26,14 @@ async fn run_listener(shared: Arc<Mutex<Shared>>) {
         // Receive a packet
 
         let mut buf = [0; 1024];
-        let len = socket.recv(&mut buf).await.unwrap();
 
-        let data = buf[..len].to_vec();
-        let data = String::from_utf8(data).unwrap();
+        let status = socket.try_recv(&mut buf);
+        if let Ok(len) = status {
+            let data = buf[..len].to_vec();
+            let data = String::from_utf8(data).unwrap();
 
-        println!("Listener {} received data from sender: {}", listener, data);
+            println!("Listener {} received data from sender: {}", listener, data);
+        }
 
         let shared = shared.lock().unwrap();
 
