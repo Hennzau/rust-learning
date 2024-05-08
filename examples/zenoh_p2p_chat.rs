@@ -7,13 +7,13 @@ use zenoh::{
 };
 
 async fn run() {
-    let matches = Command::new("Electrode").version("1.0").about("Dora node for communication between dataflow").arg(arg!(--address <VALUE>).required(true)).arg(arg!(--listener <VALUE>).required(true)).arg(arg!(--sender <VALUE>).required(true)).get_matches();
+    let matches = Command::new("Electrode").version("1.0").about("Dora node for communication between dataflow").arg(arg!(--listener <VALUE>).required(true)).arg(arg!(--sender <VALUE>).required(true)).get_matches();
 
-    let (address, listener, sender) = (matches.get_one::<String>("address").expect("required").clone(), matches.get_one::<String>("listener").expect("required").clone(), matches.get_one::<String>("sender").expect("required").clone());
-    let address = format!("udp/{}", address);
+    let (listener, sender) = (matches.get_one::<String>("listener").expect("required").clone(), matches.get_one::<String>("sender").expect("required").clone());
 
     let mut config = config::peer();
-    config.connect.endpoints.push(address.parse().unwrap());
+    config.connect.endpoints.push(sender.parse().unwrap());
+    config.listen.endpoints.push(listener.parse().unwrap());
 
     let session = zenoh::open(config).res().await.unwrap();
 
@@ -28,7 +28,7 @@ async fn run() {
     }).res().await.unwrap();
 
     loop {
-        let data: Vec<u8> = Vec::from ([0; 525000]);
+        let data: Vec<u8> = Vec::from([0; 525000]);
 
         session.put(pub_text_chat.clone(), data).res().await.unwrap();
 
