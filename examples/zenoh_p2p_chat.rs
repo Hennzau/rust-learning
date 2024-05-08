@@ -32,7 +32,7 @@ async fn run() {
     }).res().await.unwrap();
 
     let mut data: Vec<u8> = Vec::new();
-    for i in 0..1024 * 1024 { data.push(0); }
+    for i in 0..1024 { data.push(0); }
 
     loop {
         session.put(pub_text_chat.clone(), data.clone()).res().await.unwrap();
