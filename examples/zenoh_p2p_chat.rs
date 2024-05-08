@@ -3,7 +3,7 @@ use clap::{arg, Command};
 use zenoh::{
     prelude::r#async::AsyncResolve,
     config,
-    SessionDeclarations
+    SessionDeclarations,
 };
 
 async fn run() {
@@ -31,10 +31,11 @@ async fn run() {
         println!("Received: {:?}", sample.key_expr);
     }).res().await.unwrap();
 
-    loop {
-        let data: Vec<u8> = Vec::from([0; 1024*1024]);
+    let mut data: Vec<u8> = Vec::new();
+    for i in 0..1024 * 1024 { data.push(0); }
 
-        session.put(pub_text_chat.clone(), data).res().await.unwrap();
+    loop {
+        session.put(pub_text_chat.clone(), data.clone()).res().await.unwrap();
 
         tokio::time::sleep(tokio::time::Duration::from_millis(1000)).await;
     }
