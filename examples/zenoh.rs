@@ -3,11 +3,16 @@ use zenoh::prelude::*;
 use zenoh::prelude::r#async::AsyncResolve;
 
 async fn run() {
-    let session = zenoh::open(config::default()).res().await.unwrap();
-    let subscriber = session.declare_subscriber("key/expression").res().await.unwrap();
-    while let Ok(sample) = subscriber.recv_async().await {
-        println!("Received: {}", sample);
-    };
+    let mut config = config::peer();
+    config.connect.endpoints.push("udp/10.0.0.17:7447".parse().unwrap());
+
+    let session = zenoh::open(config).res().await.unwrap();
+    let subscriber = session.declare_subscriber("key/expression")
+        .callback(|sample| {
+            println!("Received: {:?}", sample.value.payload);
+        }).res().await.unwrap();
+
+    loop {}
 }
 
 fn main() {

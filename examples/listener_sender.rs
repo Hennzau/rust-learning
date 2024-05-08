@@ -5,6 +5,7 @@ use std::{
         Mutex
     }
 };
+
 use clap::{arg, Command};
 
 struct Packet {
