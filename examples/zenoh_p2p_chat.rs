@@ -7,13 +7,17 @@ use zenoh::{
 };
 
 async fn run() {
-    let matches = Command::new("Electrode").version("1.0").about("Dora node for communication between dataflow").arg(arg!(--listener <VALUE>).required(true)).arg(arg!(--sender <VALUE>).required(true)).get_matches();
+    let matches = Command::new("Electrode").version("1.0").about("Dora node for communication between dataflow").arg(arg!(--port <VALUE>).required(true)).arg(arg!(--protocol <VALUE>).required(true)).arg(arg!(--listener <VALUE>).required(true)).arg(arg!(--sender <VALUE>).required(true)).get_matches();
 
     let (listener, sender) = (matches.get_one::<String>("listener").expect("required").clone(), matches.get_one::<String>("sender").expect("required").clone());
+    let (protocol, port) = (matches.get_one::<String>("protocol").expect("required").clone(), matches.get_one::<String>("port").expect("required").clone());
+
+    let listener_session = format!("{}/{}:{}", protocol, listener, port);
+    let sender_session = format!("{}/{}:{}", protocol, sender, port);
 
     let mut config = config::peer();
-    config.connect.endpoints.push(sender.parse().unwrap());
-    config.listen.endpoints.push(listener.parse().unwrap());
+    config.listen.endpoints.push(listener_session.parse().unwrap());
+    config.connect.endpoints.push(sender_session.parse().unwrap());
 
     let session = zenoh::open(config).res().await.unwrap();
 
@@ -28,7 +32,7 @@ async fn run() {
     }).res().await.unwrap();
 
     loop {
-        let data: Vec<u8> = Vec::from([0; 525000]);
+        let data: Vec<u8> = Vec::from([0; 1024*1024]);
 
         session.put(pub_text_chat.clone(), data).res().await.unwrap();
 
